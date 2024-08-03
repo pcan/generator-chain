@@ -370,4 +370,51 @@ describe('Chain Executor', () => {
         stack2.pop.should.have.been.calledOnce;
         stack1.pop.should.not.have.been.called;
     });
+
+    it(`Should execute one async invocation step and return a promise`, async () => {
+        const stack1 = mockStack(); 
+        const chain = mockChain();
+        MockStack.returns(stack1);
+
+        stack1.emptyStub.onFirstCall().returns(false);
+        stack1.emptyStub.onSecondCall().returns(true);
+
+        stack1.head.next.returns(Promise.resolve({ value: 2, done: true }));
+
+        const result = execute(chain, 1);
+        await result.should.be.eventually.equal(2);
+
+        stack1.push.should.have.been.calledOnceWith(1, false)
+            .and.calledBefore(stack1.head.next);
+
+        stack1.head.next.firstCall.args.should.be.empty;
+        stack1.head.next.should.have.been.calledOnce
+            .and.calledBefore(stack1.pop);
+
+        stack1.pop.should.have.been.calledOnce;
+    });
+
+    it(`Should execute one async invocation step and reject`, async () => {
+        const stack1 = mockStack(); 
+        const chain = mockChain();
+        MockStack.returns(stack1);
+
+        stack1.emptyStub.onFirstCall().returns(false);
+        stack1.emptyStub.onSecondCall().returns(true);
+
+        stack1.head.next.returns(Promise.reject(new Error('foobar')));
+
+        const result = execute(chain, 1);
+        await result.should.be.eventually.rejectedWith('foobar');
+
+        stack1.push.should.have.been.calledOnceWith(1, false)
+            .and.calledBefore(stack1.head.next);
+
+        stack1.head.next.firstCall.args.should.be.empty;
+        stack1.head.next.should.have.been.calledOnce
+            .and.calledBefore(stack1.pop);
+
+        stack1.pop.should.have.been.calledOnce;
+    });
+
 });

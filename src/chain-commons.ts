@@ -41,10 +41,11 @@ type Identity<T> = T extends object ? {} & { [P in keyof T]: T[P] } : T;
 export type PromiseOrValue<T> = Promise<T> | T;
 
 export type ChainGenerator<R> = Generator<HandlerYieldRequest, R, HandlerYieldResponse>;
+export type AsyncChainGenerator<R> = AsyncGenerator<HandlerYieldRequest, R, HandlerYieldResponse>;
 
 export type HandlerYieldRequest = Proceed<unknown> | Delegate<any, unknown>;
 export type HandlerYieldResponse = unknown;
-export type HandlerGenerator<T> = ChainGenerator<PromiseOrValue<T>>;
+export type HandlerGenerator<T> = ChainGenerator<PromiseOrValue<T>> | AsyncChainGenerator<PromiseOrValue<T>>;
 
 export type Handler<T, C1, U = T, C2 = C1> = (invocation: ChainInvocation<U, C1, C2>) => HandlerGenerator<T>;
 
@@ -59,7 +60,7 @@ export interface ChainStartBuilder {
     ): ChainBuilder<T, C1, MergedHandlers<{}, N, T, C1, U, C2, X>, U, C2>;
 }
 
-export interface ChainBuilder<T, C, H extends Handlers, U, D = C> {
+export interface ChainBuilder<T, C, H extends Handlers, U = T, D = C> {
     append<N extends string, V, X extends Handler<U, D, V>>(
         name: UniqueHandlerName<H, N>, handler: X & Handler<U, D, V>): ChainBuilder<T, C, MergedHandlers<H, N, U, D, V, D, X>, V, D>;
     append<N extends string, V, E, X extends Handler<U, D, V, E>>(

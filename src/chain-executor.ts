@@ -2,7 +2,7 @@ import {
     PromiseOrValue, HandlerYieldRequest, isDelegating,
     isProceeding, ChainInvocationInternal,
     chainSym, Context, ChainGenerator, Delegate, OptionalContext,
-    Proceed, createChildInvocation, executionId, offsetSym, 
+    Proceed, createChildInvocation, executionId, offsetSym,
     ExecutionId, InternalChain
 } from "./chain-commons";
 import { ChainExecutionStack } from "./execution-stack";
@@ -77,6 +77,8 @@ enum ExecutionStatus {
     Throwing
 }
 
+type StepExecutionResult<T> = IteratorResult<HandlerYieldRequest, PromiseOrValue<T>>;
+
 class ChainExecutor<T, C> {
     private chainResult!: PromiseOrValue<T>;
     private error: unknown;
@@ -93,20 +95,13 @@ class ChainExecutor<T, C> {
     private invokeHandlers(ctx: C): PromiseOrValue<T> {
         while (!this.stack.empty) {
             try {
-
-                const { value, done } = this.step();
-
-                if (done) { // generator is returning
-                    const asyncReturn = isPromise(value);
-                    const result = asyncReturn ? this.scheduleReturn(value, ctx) : value;
-                    this.return(result, asyncReturn);
-                } else { // generator is yielding
-                    if (isPromise(value.context)) {
-                        const result = this.scheduleEnter(value, ctx);
-                        this.return(result, true);
-                    } else {
-                        ctx = this.enter(value, ctx);
-                    }
+                const stepExecutionResult = this.step();
+                if (isPromise(stepExecutionResult)) { // async generator
+                    return stepExecutionResult
+                        .then(r => this.invokeHandlers(this.dispatchResult(r, ctx)))
+                        .catch(err => (this.throw(err), this.invokeHandlers(ctx)));
+                } else { // sync generator
+                    ctx = this.dispatchResult(stepExecutionResult, ctx);
                 }
 
             } catch (err) {
@@ -115,6 +110,22 @@ class ChainExecutor<T, C> {
         }
 
         return this.result();
+    }
+
+    private dispatchResult({ value, done }: StepExecutionResult<T>, ctx: C): C {
+        if (done) { // generator is returning
+            const isPromiseResult = isPromise(value);
+            const result = isPromiseResult ? this.scheduleReturn(value, ctx) : value;
+            this.return(result, isPromiseResult);
+        } else { // generator is yielding
+            if (isPromise(value.context)) {
+                const result = this.scheduleEnter(value, ctx);
+                this.return(result, true);
+            } else {
+                ctx = this.enter(value, ctx);
+            }
+        }
+        return ctx;
     }
 
     private async scheduleEnter(value: HandlerYieldRequest, ctx: C) {

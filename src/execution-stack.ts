@@ -6,7 +6,7 @@ import {
 
 import { ChainExecutionStackFrame } from './execution-stack-frame';
 
-export class ChainExecutionStack<T, C> implements ChainExecutionStack<T, C> {
+export class ChainExecutionStack<T, C> {
 
     static readonly __empty = emptyStackFrame();
 

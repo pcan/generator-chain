@@ -5,7 +5,8 @@ import * as chaiAsPromised from 'chai-as-promised';
 import * as sinon from 'sinon';
 
 import {
-    Handler, handlerInterceptor, chain
+    Handler, handlerInterceptor, chain,
+    ChainBuilder
 } from '../src/index';
 
 use(sinonChai);
@@ -786,6 +787,66 @@ describe('Integration', () => {
             .build();
         await c.invoke({}).should.be.eventually.equal(1);
     });
+
+    it(`Should create a chain with sync and async handlers`, async () => {
+        const h1: Handler<number, object> = function* ({ proceed }) { return yield* proceed(); };
+        const h2: Handler<number, object> = async function* ({ proceed }) {
+            await Promise.resolve();
+            const res = yield* proceed();
+            await Promise.resolve();
+            return res;
+        };
+        const h3: Handler<number, object> = function* () { return 1 };
+        const c = chain('testChain')
+            .append('h1', h1)
+            .append('h2', h2)
+            .append('h3', h3)
+            .build();
+        await c.invoke({}).should.eventually.be.equal(1);
+    });
+
+    it(`Should rethrow the error thrown by async handlers`, async () => {
+        const h1: Handler<number, object> = function* ({ proceed }) { return yield* proceed(); };
+        const h2: Handler<number, object> = async function* () {
+            await Promise.resolve();
+            throw new Error('foo');
+        };
+        const c = chain('testChain')
+            .append('h1', h1)
+            .append('h2', h2)
+            .build();
+        await c.invoke({}).should.eventually.be.rejectedWith('foo');
+    });
+
+    it(`Should create a chain with 20000 handlers`, () => {
+
+        const handlers = new Array(20000).fill(null)
+            .map<Handler<number, object>>((_, idx, arr) => function* ({ proceed }) {
+                return idx === arr.length - 1 ? 123 : yield* proceed();
+            })
+
+        const builder = chain('testChain') as ChainBuilder<number, object, {}>;
+
+        const c = handlers.reduce((_, h, idx) => builder.append('h' + idx, h), builder).build();
+
+        c.invoke({}).should.be.equal(123);
+    });
+
+    it(`Should create a chain with 20000 async handlers`, async () => {
+
+        const handlers = new Array(20000).fill(null)
+            .map<Handler<number, object>>((_, idx, arr) => async function* ({ proceed }) {
+                await Promise.resolve();
+                return idx === arr.length - 1 ? 123 : yield* proceed();
+            })
+
+        const builder = chain('testChain') as ChainBuilder<number, object, {}>;
+
+        const c = handlers.reduce((_, h, idx) => builder.append('h' + idx, h), builder).build();
+
+        await c.invoke({}).should.eventually.be.equal(123);
+    });
+
 });
 
 type StubFor<H extends Handler<any, any>> = sinon.SinonStub<Parameters<H>, ReturnType<H>>;
