@@ -14,7 +14,7 @@ export function isProceeding<C>(x: any): x is Proceed<C> {
 
 export class Delegate<T, C> {
     constructor(
-        readonly chain: InternalChain<T, Handlers, C>,
+        readonly chain: InternalChain<T, C>,
         readonly context: Context<C>,
         readonly async?: boolean) {
     }
@@ -54,17 +54,17 @@ type MergedHandlers<H extends Handlers, N extends string, T, C1, U, C2 = C1> = I
 
 export interface ChainStartBuilder {
     append<N extends string, T, C1, U, C2>(name: N, handler: Handler<T, C1, U, C2>):
-        ChainBuilder<T, MergedHandlers<{}, N, T, C1, U, C2>, C1, U, C2>;
+        ChainBuilder<T, C1, MergedHandlers<{}, N, T, C1, U, C2>, U, C2>;
 }
 
-export interface ChainBuilder<T, H extends Handlers, C, U, D = C> {
+export interface ChainBuilder<T, C, H extends Handlers, U, D = C> {
     append<N extends string, V>(name: UniqueHandlerName<H, N>, handler: Handler<U, D, V>):
-        ChainBuilder<T, MergedHandlers<H, N, U, D, V>, C, V, D>;
+        ChainBuilder<T, C, MergedHandlers<H, N, U, D, V>, V, D>;
 
     append<N extends string, V, E>(name: UniqueHandlerName<H, N>, adapterHandler: Handler<U, D, V, E>):
-        ChainBuilder<T, MergedHandlers<H, N, U, D, V, E>, C, V, E>;
+        ChainBuilder<T, C, MergedHandlers<H, N, U, D, V, E>, V, E>;
 
-    build(): Chain<T, H, C>;
+    build(): Chain<T, C, H>;
 }
 
 export type InterceptorFor<H> = H extends Handler<infer T, infer C1, any, any> ? HandlerInterceptor<T, C1> : never;
@@ -80,13 +80,13 @@ export type Interceptors<H extends Handlers> = {
 
 export const handlers = Symbol('handlers');
 
-export interface Chain<T, H extends Handlers = Handlers, C = unknown> {
+export interface Chain<T, C = unknown, H extends Handlers = Handlers> {
     readonly id: string;
     invoke<U extends T, E extends C>(ctx: E): PromiseOrValue<U>;
     readonly interceptors: Interceptors<H>;
 }
 
-export interface InternalChain<T, H extends Handlers = Handlers, C = unknown> extends Chain<T, H, C> {
+export interface InternalChain<T, C = unknown> extends Chain<T, C, Handlers> {
     readonly [handlers]: ReadonlyArray<NamedHandler<T>>;
 }
 
@@ -125,8 +125,8 @@ export interface ChainInvocation<T, C1, C2> {
     readonly context: C1;
     proceed(context: NextContext<C1, C2>): ChainGenerator<T>;
     proceedAsync(context: NextContext<C1, C2>): ChainGenerator<PromiseOrValue<T>>;
-    delegate<X, Y extends X, C>(chain: Chain<X, Handlers, C>, context: Context<C>): ChainGenerator<Y>;
-    delegateAsync<X, Y extends X, C>(chain: Chain<X, Handlers, C>, context: Context<C>): ChainGenerator<PromiseOrValue<Y>>;
+    delegate<X, Y extends X, C>(chain: Chain<X, C>, context: Context<C>): ChainGenerator<Y>;
+    delegateAsync<X, Y extends X, C>(chain: Chain<X, C>, context: Context<C>): ChainGenerator<PromiseOrValue<Y>>;
     fork(ctx: C2): PromiseOrValue<T>;
 }
 
@@ -134,8 +134,8 @@ export interface ChainInvocation<T, C1, C2> {
 export interface ChainInvocationInternal<T, C1, C2> extends ChainInvocation<T, C1, C2> {
     readonly [chainSym]: InternalChain<any>;
     readonly [offsetSym]: number;
-    [createChildInvocation](chain: InternalChain<T, Handlers, C1>, context: C1, offset: number): ChainInvocationInternal<T, C1, C2>;
+    [createChildInvocation](chain: InternalChain<T, C1>, context: C1, offset: number): ChainInvocationInternal<T, C1, C2>;
 }
 
 export type ChainInvocationFactory<T, C> =
-    (executionId: ExecutionId, chain: Chain<T, Handlers, C>) => ChainInvocationInternal<T, C, unknown>;
+    (executionId: ExecutionId, chain: Chain<T, C>) => ChainInvocationInternal<T, C, unknown>;

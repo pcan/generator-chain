@@ -1,5 +1,5 @@
 import {
-    ChainInvocationInternal, Handlers,
+    ChainInvocationInternal,
     InternalChain,
     chainSym, handlers, offsetSym
 } from "./chain-commons";
@@ -52,7 +52,7 @@ export class ChainExecutionStack<T, C> implements ChainExecutionStack<T, C> {
         this.topFrame.push(ctx);
     }
 
-    delegate(chain: InternalChain<T, Handlers, C>) {
+    delegate(chain: InternalChain<T, C>) {
         this.topFrame.delegate(chain);
     }
 

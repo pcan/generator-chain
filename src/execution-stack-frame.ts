@@ -1,13 +1,13 @@
 import {
     ChainInvocationInternal, HandlerGenerator,
-    Handlers, InternalChain, createChildInvocation, handlers
+    InternalChain, createChildInvocation, handlers
 } from "./chain-commons";
 
 export class ChainExecutionStackFrame<T, C> {
     private readonly callStacks: HandlerGenerator<T>[][] = [[]];
 
     constructor(
-        private readonly chains: InternalChain<T, Handlers, C>[],
+        private readonly chains: InternalChain<T, C>[],
         private readonly invocation: ChainInvocationInternal<T, C, unknown>,
         private readonly offset: number = 0
     ) { }
@@ -41,7 +41,7 @@ export class ChainExecutionStackFrame<T, C> {
         this.topCallStack.push(chain[handlers][index].handler(invocation));
     }
 
-    delegate(chain: InternalChain<T, Handlers, C>) {
+    delegate(chain: InternalChain<T, C>) {
         this.chains.push(chain);
         this.callStacks.push([]);
     }

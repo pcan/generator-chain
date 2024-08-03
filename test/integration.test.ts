@@ -5,7 +5,7 @@ import * as chaiAsPromised from 'chai-as-promised';
 import * as sinon from 'sinon';
 
 import {
-    Handler, handlerInterceptor, chain, ExecutionId
+    Handler, handlerInterceptor, chain
 } from '../src/index';
 
 use(sinonChai);

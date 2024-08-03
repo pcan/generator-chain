@@ -1,8 +1,9 @@
 import {
-    Handlers, PromiseOrValue, HandlerYieldRequest, isDelegating,
+    PromiseOrValue, HandlerYieldRequest, isDelegating,
     isProceeding, ChainInvocationInternal,
     chainSym, Context, ChainGenerator, Delegate, OptionalContext,
-    Proceed, createChildInvocation, executionId, offsetSym, ExecutionId, InternalChain
+    Proceed, createChildInvocation, executionId, offsetSym, 
+    ExecutionId, InternalChain
 } from "./chain-commons";
 import { ChainExecutionStack } from "./execution-stack";
 
@@ -40,21 +41,21 @@ class ChainInvocation<T, C1, C2> implements ChainInvocationInternal<T, C1, C2> {
         return (yield new Proceed(context, true)) as PromiseOrValue<T>;
     }
 
-    * delegate<X, Y extends X, C>(chain: InternalChain<X, Handlers, C>, context: Context<C>): ChainGenerator<Y> {
+    * delegate<X, Y extends X, C>(chain: InternalChain<X, C>, context: Context<C>): ChainGenerator<Y> {
         return (yield new Delegate(chain, context)) as Y;
     }
 
-    * delegateAsync<X, Y extends X, C>(chain: InternalChain<X, Handlers, C>, context: Context<C>): ChainGenerator<PromiseOrValue<Y>> {
+    * delegateAsync<X, Y extends X, C>(chain: InternalChain<X, C>, context: Context<C>): ChainGenerator<PromiseOrValue<Y>> {
         return (yield new Delegate(chain, context, true)) as PromiseOrValue<Y>;
     }
 
     fork(ctx: C2): PromiseOrValue<T> {
-        return execute.call<ChainInvocation<T, any, any>, [InternalChain<T, Handlers, any>, C2], PromiseOrValue<T>>(
+        return execute.call<ChainInvocation<T, any, any>, [InternalChain<T, any>, C2], PromiseOrValue<T>>(
             this, this[chainSym], ctx
         );
     }
 
-    [createChildInvocation](chain: InternalChain<T, Handlers, C1>, context: C1, offset: number) {
+    [createChildInvocation](chain: InternalChain<T, C1>, context: C1, offset: number) {
         const invocation = new ChainInvocation(this.executionId, chain) as Mutable<this>;
         invocation.context = context;
         invocation[offsetSym] = offset;
@@ -64,7 +65,7 @@ class ChainInvocation<T, C1, C2> implements ChainInvocationInternal<T, C1, C2> {
 }
 
 
-export function execute<T, C>(this: ChainInvocation<T, C, any> | void, chain: InternalChain<T, Handlers, C>, ctx: C): PromiseOrValue<T> {
+export function execute<T, C>(this: ChainInvocation<T, C, any> | void, chain: InternalChain<T, C>, ctx: C): PromiseOrValue<T> {
     const invocation = this ?? new ChainInvocation<T, C, any>(executionId(), chain);
     const stack = new ChainExecutionStack(invocation);
     return new ChainExecutor(stack).run(ctx);

@@ -1,6 +1,6 @@
 import {
     Handlers, Chain, InterceptorOperations,
-    NamedHandler, OpaqueHandler, interceptorSym, 
+    NamedHandler, OpaqueHandler, interceptorSym,
     ChainStartBuilder, handlers, InternalChain
 } from "./chain-commons";
 import { execute } from "./chain-executor";
@@ -13,7 +13,7 @@ export function chain(id: string) {
         return builder;
     }
 
-    function build<T, C>(): Chain<T, Handlers, C> {
+    function build<T, C>(): Chain<T, C, Handlers> {
         const interceptors = Object.freeze(namedHandlers.reduce(
             (obj, namedHandler) => (obj[namedHandler.name] = {
                 add: (interceptor) =>
@@ -30,7 +30,7 @@ export function chain(id: string) {
             return execute(chain, ctx);
         }
 
-        const chain = { id, invoke, [handlers]: namedHandlers, interceptors } as InternalChain<T, Handlers, C>;
+        const chain = { id, invoke, [handlers]: namedHandlers, interceptors } as InternalChain<T, C>;
 
         return chain;
     }
