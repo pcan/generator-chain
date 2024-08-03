@@ -1,13 +1,13 @@
 import {
-    Chain, ChainInvocationInternal, HandlerGenerator,
-    Handlers, createChildInvocation
+    ChainInvocationInternal, HandlerGenerator,
+    Handlers, InternalChain, createChildInvocation, handlers
 } from "./chain-commons";
 
 export class ChainExecutionStackFrame<T, C> {
     private readonly callStacks: HandlerGenerator<T>[][] = [[]];
 
     constructor(
-        private readonly chains: Chain<T, Handlers, C>[],
+        private readonly chains: InternalChain<T, Handlers, C>[],
         private readonly invocation: ChainInvocationInternal<T, C, unknown>,
         private readonly offset: number = 0
     ) { }
@@ -34,14 +34,14 @@ export class ChainExecutionStackFrame<T, C> {
     push(ctx: C) {
         const chain = this.topChain;
         const index = this.nextHandlerIndex;
-        if (index >= chain.handlers.length) {
+        if (index >= chain[handlers].length) {
             throw new Error('No further handlers registered.');
         }
         const invocation = this.invocation[createChildInvocation](chain, ctx, index + 1);
-        this.topCallStack.push(chain.handlers[index].handler(invocation));
+        this.topCallStack.push(chain[handlers][index].handler(invocation));
     }
 
-    delegate(chain: Chain<T, Handlers, C>) {
+    delegate(chain: InternalChain<T, Handlers, C>) {
         this.chains.push(chain);
         this.callStacks.push([]);
     }

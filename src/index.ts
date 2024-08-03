@@ -1,10 +1,10 @@
 export {
     Chain, ChainBuilder, ChainGenerator,
     Context, OptionalContext, NamedHandler, OpaqueHandler,
-    ChainInvocation, HandlerGenerator, HandlerArray,
+    ChainInvocation, HandlerGenerator, Interceptors,
     InterceptorFor, UniqueHandlerName, Handlers,
     Handler, HandlerInterceptor, handlerInterceptor,
-    HandlerOperations, ExecutionId
+    InterceptorOperations, ExecutionId
 } from "./chain-commons";
 
 export {

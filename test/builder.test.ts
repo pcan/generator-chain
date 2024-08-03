@@ -4,9 +4,10 @@ import * as sinonChai from 'sinon-chai';
 import * as chaiAsPromised from 'chai-as-promised';
 import * as sinon from 'sinon';
 
-import { chain,  OpaqueHandler, handlerInterceptor } from "../src/index";
+import { chain, OpaqueHandler, handlerInterceptor } from "../src/index";
 import * as executorModule from "../src/chain-executor";
-import { interceptorSym } from '../src/chain-commons';
+import { InternalChain, handlers, interceptorSym } from '../src/chain-commons';
+import { cast } from './test-commons';
 
 
 use(sinonChai);
@@ -27,12 +28,14 @@ describe('Chain Builder', () => {
             .append('h1', handler)
             .build();
 
-        c.handlers.should.have.length(1);
-        c.handlers[0].handler.should.be.equal(handler);
-        c.handlers[0].name.should.be.equal('h1');
+        const internalChain = cast<InternalChain<any>>(c);
 
-        c.handlers.h1.addInterceptor.should.be.instanceOf(Function);
-        c.handlers.h1.removeInterceptor.should.be.instanceOf(Function);
+        internalChain[handlers].should.have.length(1);
+        internalChain[handlers][0].handler.should.be.equal(handler);
+        internalChain[handlers][0].name.should.be.equal('h1');
+
+        c.interceptors.h1.add.should.be.instanceOf(Function);
+        c.interceptors.h1.remove.should.be.instanceOf(Function);
     });
 
     it(`Should invoke a chain`, () => {
@@ -52,12 +55,13 @@ describe('Chain Builder', () => {
 
         const interceptor = handlerInterceptor('i1', function* () { });
         interceptor[interceptorSym].should.be.equal('i1');
-        c.handlers.h1.addInterceptor(interceptor);
+        c.interceptors.h1.add(interceptor);
 
-        c.handlers.should.have.length(2);
+        const internalChain = cast<InternalChain<any>>(c);
 
-        c.handlers[0].handler.should.be.equal(interceptor);
-        c.handlers[1].handler.should.be.equal(handler);
+        internalChain[handlers].should.have.length(2);
+        internalChain[handlers][0].handler.should.be.equal(interceptor);
+        internalChain[handlers][1].handler.should.be.equal(handler);
     });
 
     it(`Should remove a handler interceptor`, () => {
@@ -67,13 +71,15 @@ describe('Chain Builder', () => {
             .build();
 
         const interceptor = handlerInterceptor('i1', function* () { });
-        c.handlers.h1.addInterceptor(interceptor);
+        c.interceptors.h1.add(interceptor);
 
-        c.handlers.h1.removeInterceptor(interceptor);
+        c.interceptors.h1.remove(interceptor);
+        
+        const internalChain = cast<InternalChain<any>>(c);
 
-        c.handlers.should.have.length(1);
-        c.handlers[0].handler.should.be.equal(handler);
-        c.handlers[0].name.should.be.equal('h1');
+        internalChain[handlers].should.have.length(1);
+        internalChain[handlers][0].name.should.be.equal('h1');
+        internalChain[handlers][0].handler.should.be.equal(handler);
     });
 
 
@@ -85,7 +91,7 @@ describe('Chain Builder', () => {
 
         const interceptor = handlerInterceptor('i1', function* () { });
 
-        (() => c.handlers.h1.removeInterceptor(interceptor))
+        (() => c.interceptors.h1.remove(interceptor))
             .should.throw('Handler not found.');
     });
 

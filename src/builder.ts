@@ -1,12 +1,9 @@
 import {
-    ChainBuilder, Handlers, Chain, HandlerOperations,
-    NamedHandler, OpaqueHandler, interceptorSym, ChainStartBuilder
+    Handlers, Chain, InterceptorOperations,
+    NamedHandler, OpaqueHandler, interceptorSym, 
+    ChainStartBuilder, handlers, InternalChain
 } from "./chain-commons";
 import { execute } from "./chain-executor";
-
-export {
-
-} from "./chain-commons";
 
 export function chain(id: string) {
     const namedHandlers: NamedHandler[] = [];
@@ -17,24 +14,23 @@ export function chain(id: string) {
     }
 
     function build<T, C>(): Chain<T, Handlers, C> {
-        const initialHandlers = Object.create(namedHandlers)
-        const handlers = Object.freeze(Object.assign(initialHandlers, namedHandlers.reduce(
+        const interceptors = Object.freeze(namedHandlers.reduce(
             (obj, namedHandler) => (obj[namedHandler.name] = {
-                addInterceptor: (interceptor) =>
+                add: (interceptor) =>
                     namedHandlers.splice(findHandlerIndex(namedHandlers, namedHandler.handler),
                         0, { name: interceptor[interceptorSym], handler: interceptor }),
-                removeInterceptor: (interceptor) =>
+                remove: (interceptor) =>
                     namedHandlers.splice(findHandlerIndex(namedHandlers, interceptor), 1)
 
             }, obj),
-            {} as { [k: string]: HandlerOperations<OpaqueHandler> } & ReadonlyArray<NamedHandler<T>>
-        )));
+            {} as Record<string, InterceptorOperations<OpaqueHandler>>
+        ));
 
         function invoke(ctx: C) {
             return execute(chain, ctx);
         }
 
-        const chain = { id, invoke, handlers } as Chain<T, Handlers, C>;
+        const chain = { id, invoke, [handlers]: namedHandlers, interceptors } as InternalChain<T, Handlers, C>;
 
         return chain;
     }

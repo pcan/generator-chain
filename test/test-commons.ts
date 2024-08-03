@@ -1,8 +1,8 @@
 import sinon = require("sinon");
 import {
     Chain,
-    ChainInvocationInternal, HandlerGenerator, NamedHandler,
-    chainSym, createChildInvocation, executionId, offsetSym
+    ChainInvocationInternal, HandlerGenerator, InternalChain, NamedHandler,
+    chainSym, createChildInvocation, executionId, handlers, offsetSym
 } from "../src/chain-commons";
 
 type Invocation = ChainInvocationInternal<any, any, any> & { stub: sinon.SinonStub<any, Invocation> }
@@ -57,10 +57,10 @@ export function mockGenerator(): HandlerGenerator<any> {
     });
 }
 
-export function mockChain(handlers = [mockHandler()]): Chain<any> {
-    return cast<Chain<any>>({
+export function mockChain(mockHandlers = [mockHandler()]): InternalChain<any> {
+    return cast<InternalChain<any>>({
         id: id(),
-        handlers
+        [handlers]: mockHandlers
     });
 }
 

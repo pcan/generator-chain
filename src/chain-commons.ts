@@ -14,7 +14,7 @@ export function isProceeding<C>(x: any): x is Proceed<C> {
 
 export class Delegate<T, C> {
     constructor(
-        readonly chain: Chain<T, Handlers, C>,
+        readonly chain: InternalChain<T, Handlers, C>,
         readonly context: Context<C>,
         readonly async?: boolean) {
     }
@@ -69,21 +69,25 @@ export interface ChainBuilder<T, H extends Handlers, C, U, D = C> {
 
 export type InterceptorFor<H> = H extends Handler<infer T, infer C1, any, any> ? HandlerInterceptor<T, C1> : never;
 
-export interface HandlerOperations<H extends OpaqueHandler> {
-    addInterceptor(interceptor: InterceptorFor<H>): void;
-    removeInterceptor(interceptor: InterceptorFor<H>): void;
+export interface InterceptorOperations<H extends OpaqueHandler> {
+    add(interceptor: InterceptorFor<H>): void;
+    remove(interceptor: InterceptorFor<H>): void;
 }
 
-export type HandlerArray<T, H> = {
-    readonly [K in keyof H]: H[K] extends OpaqueHandler ? HandlerOperations<H[K]> : never
-} & ReadonlyArray<NamedHandler<T>>;
+export type Interceptors<H extends Handlers> = {
+    readonly [K in keyof H]: H[K] extends OpaqueHandler ? InterceptorOperations<H[K]> : never
+};
 
-export const handlersSym = Symbol('handlers');
+export const handlers = Symbol('handlers');
 
 export interface Chain<T, H extends Handlers = Handlers, C = unknown> {
     readonly id: string;
     invoke<U extends T, E extends C>(ctx: E): PromiseOrValue<U>;
-    readonly handlers: HandlerArray<T, H>;
+    readonly interceptors: Interceptors<H>;
+}
+
+export interface InternalChain<T, H extends Handlers = Handlers, C = unknown> extends Chain<T, H, C> {
+    readonly [handlers]: ReadonlyArray<NamedHandler<T>>;
 }
 
 export type OpaqueHandler<T = any> = Handler<T, any, any>;
@@ -128,9 +132,9 @@ export interface ChainInvocation<T, C1, C2> {
 
 
 export interface ChainInvocationInternal<T, C1, C2> extends ChainInvocation<T, C1, C2> {
-    readonly [chainSym]: Chain<any>;
+    readonly [chainSym]: InternalChain<any>;
     readonly [offsetSym]: number;
-    [createChildInvocation](chain: Chain<T, Handlers, C1>, context: C1, offset: number): ChainInvocationInternal<T, C1, C2>;
+    [createChildInvocation](chain: InternalChain<T, Handlers, C1>, context: C1, offset: number): ChainInvocationInternal<T, C1, C2>;
 }
 
 export type ChainInvocationFactory<T, C> =

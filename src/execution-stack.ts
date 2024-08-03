@@ -1,6 +1,7 @@
 import {
-    Chain, ChainInvocationInternal, Handlers,
-    chainSym, offsetSym
+    ChainInvocationInternal, Handlers,
+    InternalChain,
+    chainSym, handlers, offsetSym
 } from "./chain-commons";
 
 import { ChainExecutionStackFrame } from './execution-stack-frame';
@@ -16,7 +17,7 @@ export class ChainExecutionStack<T, C> implements ChainExecutionStack<T, C> {
         chain = invocation[chainSym],
         readonly offset = invocation[offsetSym]
     ) {
-        if (chain.handlers.length === 0) {
+        if (chain[handlers].length === 0) {
             throw new Error('No handlers registered.');
         }
         this.frames = [new ChainExecutionStackFrame<T, C>([chain], invocation, offset)];
@@ -51,7 +52,7 @@ export class ChainExecutionStack<T, C> implements ChainExecutionStack<T, C> {
         this.topFrame.push(ctx);
     }
 
-    delegate(chain: Chain<T, Handlers, C>) {
+    delegate(chain: InternalChain<T, Handlers, C>) {
         this.topFrame.delegate(chain);
     }
 

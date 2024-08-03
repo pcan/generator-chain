@@ -321,7 +321,7 @@ describe('Integration', () => {
 
         const interceptor = handlerInterceptor('i', interceptorSpy);
 
-        c.handlers.h2.addInterceptor(interceptor);
+        c.interceptors.h2.add(interceptor);
 
         c.invoke({ x: 2 }).should.be.equal(13);
         h1.should.have.been.calledBefore(interceptorSpy);
@@ -345,10 +345,10 @@ describe('Integration', () => {
 
         const interceptor = handlerInterceptor('i', interceptorSpy);
 
-        c.handlers.h2.addInterceptor(interceptor);
+        c.interceptors.h2.add(interceptor);
         c.invoke({ x: 3 });
 
-        c.handlers.h2.removeInterceptor(interceptor);
+        c.interceptors.h2.remove(interceptor);
         c.invoke({ x: 2 }).should.be.equal(7);
 
         interceptor.should.have.been.calledOnce.and.calledWithMatch({ context: { x: 9 } });
@@ -365,7 +365,7 @@ describe('Integration', () => {
             return yield* proceed();
         });
 
-        (() => c.handlers.h.removeInterceptor(interceptor))
+        (() => c.interceptors.h.remove(interceptor))
             .should.throw('Handler not found.');
         c.invoke({}).should.be.equal(1);
     });
