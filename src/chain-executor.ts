@@ -12,7 +12,7 @@ class ChainInvocation<T, C1, C2> implements ChainInvocationInternal<T, C1, C2> {
     readonly [offsetSym]: number = 0;
     readonly [chainSym]: Chain<any>;
 
-    private static lazyForkGetter = {
+    private static readonly lazyForkGetter = {
         get<T, C1, C2>(this: ChainInvocation<T, C1, C2> & { boundFork: Function }) {
             return this.boundFork ??= ChainInvocation.prototype.fork.bind(this);
         }
@@ -38,12 +38,12 @@ class ChainInvocation<T, C1, C2> implements ChainInvocationInternal<T, C1, C2> {
         return (yield new Proceed(context, true)) as PromiseOrValue<T>;
     }
 
-    * delegate<U, C>(chain: Chain<U, Handlers, C>, context: Context<C>): ChainGenerator<U> {
-        return (yield new Delegate(chain, context)) as U;
+    * delegate<X, Y extends X, C>(chain: Chain<X, Handlers, C>, context: Context<C>): ChainGenerator<Y> {
+        return (yield new Delegate(chain, context)) as Y;
     }
 
-    * delegateAsync<U, C>(chain: Chain<U, Handlers, C>, context: Context<C>): ChainGenerator<PromiseOrValue<U>> {
-        return (yield new Delegate(chain, context, true)) as PromiseOrValue<U>;
+    * delegateAsync<X, Y extends X, C>(chain: Chain<X, Handlers, C>, context: Context<C>): ChainGenerator<PromiseOrValue<Y>> {
+        return (yield new Delegate(chain, context, true)) as PromiseOrValue<Y>;
     }
 
     fork(ctx: C2): PromiseOrValue<T> {

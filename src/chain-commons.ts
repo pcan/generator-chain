@@ -48,8 +48,8 @@ export type HandlerGenerator<T> = ChainGenerator<PromiseOrValue<T>>;
 
 export type Handler<T, C1, U = T, C2 = C1> = (invocation: ChainInvocation<U, C1, C2>) => HandlerGenerator<T>;
 
-export type Handlers = { [k: string]: OpaqueHandler };
-export type ValidHandlerName<H extends Handlers, N extends string> = H[N] extends OpaqueHandler ? never : N;
+export type Handlers = Record<string, OpaqueHandler>;
+export type UniqueHandlerName<H extends Handlers, N extends string> = N extends keyof H ? never : N;
 type MergedHandlers<H extends Handlers, N extends string, T, C1, U, C2 = C1> = Identity<H & { [key in N]: Handler<T, C1, U, C2> }>
 
 export interface ChainStartBuilder {
@@ -58,10 +58,10 @@ export interface ChainStartBuilder {
 }
 
 export interface ChainBuilder<T, H extends Handlers, C, U, D = C> {
-    append<N extends string, V>(name: ValidHandlerName<H, N>, handler: Handler<U, D, V>):
+    append<N extends string, V>(name: UniqueHandlerName<H, N>, handler: Handler<U, D, V>):
         ChainBuilder<T, MergedHandlers<H, N, U, D, V>, C, V, D>;
 
-    append<N extends string, V, E>(name: ValidHandlerName<H, N>, adapterHandler: Handler<U, D, V, E>):
+    append<N extends string, V, E>(name: UniqueHandlerName<H, N>, adapterHandler: Handler<U, D, V, E>):
         ChainBuilder<T, MergedHandlers<H, N, U, D, V, E>, C, V, E>;
 
     build(): Chain<T, H, C>;
@@ -114,13 +114,15 @@ export interface ExecutionId {
     toString(): string;
 }
 
+type NextContext<C1, C2> = C1 extends C2 ? OptionalContext<C2> : Context<C2>;
+
 export interface ChainInvocation<T, C1, C2> {
     readonly executionId: ExecutionId;
     readonly context: C1;
-    proceed(context: OptionalContext<C2>): ChainGenerator<T>;
-    proceedAsync(context: OptionalContext<C2>): ChainGenerator<PromiseOrValue<T>>;
-    delegate<X, C>(chain: Chain<X, Handlers, C>, context: Context<C>): ChainGenerator<X>;
-    delegateAsync<U, C>(chain: Chain<U, Handlers, C>, context: Context<C>): ChainGenerator<PromiseOrValue<U>>;
+    proceed(context: NextContext<C1, C2>): ChainGenerator<T>;
+    proceedAsync(context: NextContext<C1, C2>): ChainGenerator<PromiseOrValue<T>>;
+    delegate<X, Y extends X, C>(chain: Chain<X, Handlers, C>, context: Context<C>): ChainGenerator<Y>;
+    delegateAsync<X, Y extends X, C>(chain: Chain<X, Handlers, C>, context: Context<C>): ChainGenerator<PromiseOrValue<Y>>;
     fork(ctx: C2): PromiseOrValue<T>;
 }
 
