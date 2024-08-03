@@ -28,11 +28,11 @@ export function isDelegating<T, C>(x: any): x is Delegate<T, C> {
 }
 
 export const interceptorSym = Symbol('interceptor');
-export interface HandlerInterceptor<T, C> extends Handler<T, C> {
+export interface HandlerInterceptor<T, C> extends Handler<T, C, T> {
     readonly [interceptorSym]: string;
 }
 
-export function handlerInterceptor<T, C>(name: string, interceptorFn: Handler<T, C>): HandlerInterceptor<T, C> {
+export function handlerInterceptor<T, C>(name: string, interceptorFn: Handler<T, C, T>): HandlerInterceptor<T, C> {
     return Object.assign(interceptorFn, { [interceptorSym]: name });
 }
 
@@ -46,23 +46,28 @@ export type HandlerYieldRequest = Proceed<unknown> | Delegate<any, unknown>;
 export type HandlerYieldResponse = unknown;
 export type HandlerGenerator<T> = ChainGenerator<PromiseOrValue<T>>;
 
-export type Handler<T, C1, C2 = C1> = (invocation: ChainInvocation<T, C1, C2>) => HandlerGenerator<T>;
+export type Handler<T, C1, U = T, C2 = C1> = (invocation: ChainInvocation<U, C1, C2>) => HandlerGenerator<T>;
 
 export type Handlers = { [k: string]: OpaqueHandler };
 export type ValidHandlerName<H extends Handlers, N extends string> = H[N] extends OpaqueHandler ? never : N;
-type MergedHandlers<H extends Handlers, N extends string, T, C1, C2 = C1> = Identity<H & { [key in N]: Handler<T, C1, C2> }>
+type MergedHandlers<H extends Handlers, N extends string, T, C1, U, C2 = C1> = Identity<H & { [key in N]: Handler<T, C1, U, C2> }>
 
-export interface ChainBuilder<T, H extends Handlers, C, D = C> {
-    append<N extends string>(name: ValidHandlerName<H, N>, handler: Handler<T, D>):
-        ChainBuilder<T, MergedHandlers<H, N, T, D>, C, D>;
+export interface ChainStartBuilder {
+    append<N extends string, T, C1, U, C2>(name: N, handler: Handler<T, C1, U, C2>):
+        ChainBuilder<T, MergedHandlers<{}, N, T, C1, U, C2>, C1, U, C2>;
+}
 
-    append<N extends string, E>(name: ValidHandlerName<H, N>, adapterHandler: Handler<T, D, E>):
-        ChainBuilder<T, MergedHandlers<H, N, T, D, E>, C, E>;
+export interface ChainBuilder<T, H extends Handlers, C, U, D = C> {
+    append<N extends string, V>(name: ValidHandlerName<H, N>, handler: Handler<U, D, V>):
+        ChainBuilder<T, MergedHandlers<H, N, U, D, V>, C, V, D>;
+
+    append<N extends string, V, E>(name: ValidHandlerName<H, N>, adapterHandler: Handler<U, D, V, E>):
+        ChainBuilder<T, MergedHandlers<H, N, U, D, V, E>, C, V, E>;
 
     build(): Chain<T, H, C>;
 }
 
-export type InterceptorFor<H> = H extends Handler<infer T, infer C1, any> ? HandlerInterceptor<T, C1> : never;
+export type InterceptorFor<H> = H extends Handler<infer T, infer C1, any, any> ? HandlerInterceptor<T, C1> : never;
 
 export interface HandlerOperations<H extends OpaqueHandler> {
     addInterceptor(interceptor: InterceptorFor<H>): void;
@@ -81,7 +86,7 @@ export interface Chain<T, H extends Handlers = Handlers, C = unknown> {
     readonly handlers: HandlerArray<T, H>;
 }
 
-export type OpaqueHandler<T = any> = Handler<T, any>;
+export type OpaqueHandler<T = any> = Handler<T, any, any>;
 
 export type NamedHandler<T = unknown> = { name: string, handler: OpaqueHandler<T> };
 
@@ -93,21 +98,28 @@ export const offsetSym = Symbol('offset');
 export const createChildInvocation = Symbol('createChildInvocation');
 
 const executionCounter = Symbol('executionCounter');
-export class ExecutionId {
+class _ExecutionId implements ExecutionId {
     private static [executionCounter] = 0;
-    private readonly value = ExecutionId[executionCounter]++;
+    private readonly value = _ExecutionId[executionCounter]++;
     toString() {
         return `{executionId:${this.value}}`;
     }
 }
 
+export function executionId(): ExecutionId {
+    return new _ExecutionId();
+}
+
+export interface ExecutionId {
+    toString(): string;
+}
 
 export interface ChainInvocation<T, C1, C2> {
     readonly executionId: ExecutionId;
     readonly context: C1;
     proceed(context: OptionalContext<C2>): ChainGenerator<T>;
     proceedAsync(context: OptionalContext<C2>): ChainGenerator<PromiseOrValue<T>>;
-    delegate<U, C>(chain: Chain<U, Handlers, C>, context: Context<C>): ChainGenerator<U>;
+    delegate<X, C>(chain: Chain<X, Handlers, C>, context: Context<C>): ChainGenerator<X>;
     delegateAsync<U, C>(chain: Chain<U, Handlers, C>, context: Context<C>): ChainGenerator<PromiseOrValue<U>>;
     fork(ctx: C2): PromiseOrValue<T>;
 }

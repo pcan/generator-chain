@@ -1,6 +1,6 @@
 import {
     Chain, Handlers, PromiseOrValue, HandlerYieldRequest, isDelegating, isProceeding, ChainInvocationInternal,
-    chainSym, Context, ChainGenerator, Delegate, OptionalContext, Proceed, createChildInvocation, ExecutionId, offsetSym
+    chainSym, Context, ChainGenerator, Delegate, OptionalContext, Proceed, createChildInvocation, executionId, offsetSym, ExecutionId
 } from "./chain-commons";
 import { ChainExecutionStack } from "./execution-stack";
 
@@ -63,7 +63,7 @@ class ChainInvocation<T, C1, C2> implements ChainInvocationInternal<T, C1, C2> {
 
 
 export function execute<T, C>(this: ChainInvocation<T, C, any> | void, chain: Chain<T, Handlers, C>, ctx: C): PromiseOrValue<T> {
-    const invocation = this ?? new ChainInvocation<T, C, any>(new ExecutionId(), chain);
+    const invocation = this ?? new ChainInvocation<T, C, any>(executionId(), chain);
     const stack = new ChainExecutionStack(invocation);
     return new ChainExecutor(stack).run(ctx);
 }

@@ -5,7 +5,7 @@ import * as chaiAsPromised from 'chai-as-promised';
 import * as sinon from 'sinon';
 
 import {
-    Handler, handlerInterceptor, chain
+    Handler, handlerInterceptor, chain, ExecutionId
 } from '../src/index';
 
 use(sinonChai);
@@ -14,14 +14,9 @@ should();
 
 describe('Integration', () => {
 
-    it(`Should throw when invoking an empty chain`, () => {
-        const c = chain<object, object>('testChain').build();
-        (() => c.invoke({})).should.throw('No handlers registered.');
-    });
-
     it(`Should create a chain with one handler`, () => {
         const h = function* () { return 1 };
-        const c = chain<number, object>('testChain').append('h', h).build();
+        const c = chain('testChain').append('h', h).build();
         c.invoke({}).should.be.equal(1);
     });
 
@@ -29,7 +24,25 @@ describe('Integration', () => {
         const h1: Handler<number, object> = function* ({ proceed }) { return yield* proceed(); };
         const h2: Handler<number, object> = function* ({ proceed }) { return yield* proceed(); };
         const h3: Handler<number, object> = function* () { return 1 };
-        const c = chain<number, object>('testChain')
+        const c = chain('testChain')
+            .append('h1', h1)
+            .append('h2', h2)
+            .append('h3', h3)
+            .build();
+        c.invoke({}).should.be.equal(1);
+    });
+
+    it(`Should create a chain with multiple handlers having different return types`, () => {
+        const h1: Handler<number, object, boolean> = function* ({ proceed }) {
+            return (yield* proceed()) === true ? 1 : 0;
+        };
+        const h2: Handler<boolean, object, string> = function* ({ proceed }) {
+            return (yield* proceed()) === 'true';
+        };
+        const h3: Handler<string, object, void> = function* () {
+            return 'true'
+        };
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .append('h3', h3)
@@ -44,7 +57,7 @@ describe('Integration', () => {
         const h1: Handler<number, object> = function* ({ proceed }) {
             return yield* (fakeProceed() as ReturnType<typeof proceed>);
         };
-        const c = chain<number, object>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .build();
         (() => c.invoke({})).should.throw('Unsupported yield operation: foobar');
@@ -54,7 +67,7 @@ describe('Integration', () => {
         const h1: Handler<number, object> = function* ({ proceed }) { return 1 + (yield* proceed()); };
         const h2: Handler<number, object> = function* ({ proceed }) { return 2 * (yield* proceed()); };
         const h3: Handler<number, object> = function* () { return 3 };
-        const c = chain<number, object>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .append('h3', h3)
@@ -70,7 +83,7 @@ describe('Integration', () => {
             return yield* proceed({ x: x + 1 });
         };
         const h3: Handler<number, { x: number }> = function* ({ context: { x } }) { return x };
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .append('h3', h3)
@@ -81,7 +94,7 @@ describe('Integration', () => {
     it(`Should throw when there are no further handlers`, () => {
         const h1: Handler<number, object> = function* ({ proceed }) { return yield* proceed(); };
         const h2: Handler<number, object> = function* ({ proceed }) { return yield* proceed(); };
-        const c = chain<number, object>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .build();
@@ -91,7 +104,7 @@ describe('Integration', () => {
     it(`Should rethrow the error thrown by handlers`, () => {
         const h1: Handler<number, object> = function* ({ proceed }) { return yield* proceed(); };
         const h2: Handler<number, object> = function* () { throw new Error('foobar') };
-        const c = chain<number, object>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .build();
@@ -108,7 +121,7 @@ describe('Integration', () => {
             }
         };
         const h3: Handler<number, object> = function* () { throw new Error('foobar') };
-        const c = chain<number, object>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .append('h3', h3)
@@ -126,7 +139,7 @@ describe('Integration', () => {
             }
         };
         const h3: Handler<number, object> = function* () { throw new Error('foobar') };
-        const c = chain<number, object>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .append('h3', h3)
@@ -146,7 +159,7 @@ describe('Integration', () => {
             }
         };
         const h3: Handler<number, { x: number }> = function* ({ context: { x } }) { return x + 2; };
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .append('h3', h3)
@@ -157,22 +170,22 @@ describe('Integration', () => {
     })
 
     it(`Should create a chain with an adapter and a handler`, () => {
-        const a: Handler<number, { x: number }, { y: number }> = function* ({ proceed, context: { x } }) {
+        const a: Handler<number, { x: number }, number, { y: number }> = function* ({ proceed, context: { x } }) {
             return yield* proceed({ y: x });
         };
         const h: Handler<number, { y: number }> = function* ({ context: { y } }) {
             return y;
         };
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('a', a).append('h', h).build();
         c.invoke({ x: 2 }).should.be.equal(2);
     });
 
     it(`Should create a chain with multiple adapters and handlers`, () => {
-        const a1: Handler<number, { x: number }, { y: number }> = function* ({ proceed, context: { x } }) {
+        const a1: Handler<number, { x: number }, number, { y: number }> = function* ({ proceed, context: { x } }) {
             return yield* proceed({ y: x });
         };
-        const a2: Handler<number, { y: number }, { z: number }> = function* ({ proceed, context: { y } }) {
+        const a2: Handler<number, { y: number }, number, { z: number }> = function* ({ proceed, context: { y } }) {
             return yield* proceed({ z: y });
         };
         const h1: Handler<number, { x: number }> = function* ({ proceed }) {
@@ -184,7 +197,7 @@ describe('Integration', () => {
         const h3: Handler<number, { z: number }> = function* ({ context: { z } }) {
             return z;
         };
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('a1', a1)
             .append('h2', h2)
@@ -200,16 +213,16 @@ describe('Integration', () => {
         const h3: Handler<number, { x: number }, { y: number }> = function* ({ delegate, context: { x } }) {
             return yield* delegate(c2, { y: x * 2 });
         };
-        const c1 = chain<number, { x: number }>('testChain1')
+        const c1 = chain('testChain1')
             .append('h1', h1).append('h2', h2).append('h3', h3).build();
 
         const h4: Handler<number, { y: number }> = function* ({ proceed }) { return yield* proceed(); };
         const h5: Handler<number, { y: number }> = function* ({ context, delegate }) { return yield* delegate(c3, context); };
-        const c2 = chain<number, { y: number }>('testChain2')
+        const c2 = chain('testChain2')
             .append('h1', h4).append('h2', h5).build();
 
         const h6: Handler<number, { y: number }> = function* ({ context: { y } }) { return y + 1; };
-        const c3 = chain<number, { y: number }>('testChain2')
+        const c3 = chain('testChain2')
             .append('h1', h6).build();
 
         c1.invoke({ x: 3 }).should.be.equal(7);
@@ -221,13 +234,13 @@ describe('Integration', () => {
         const h3: Handler<number, object> = function* ({ delegate, context }) {
             return yield* delegate(c2, context);
         };
-        const c1 = chain<number, object>('testChain1')
+        const c1 = chain('testChain1')
             .append('h1', h1).append('h2', h2).append('h3', h3).build();
 
         const h4: Handler<number, object> = function* ({ proceed }) { return yield* proceed(); };
         const h5: Handler<number, object> = function* ({ proceed }) { return yield* proceed(); };
         const h6: Handler<number, object> = function* () { throw new Error('foobar') };
-        const c2 = chain<number, object>('testChain2')
+        const c2 = chain('testChain2')
             .append('h1', h4).append('h2', h5).append('h3', h6).build();
 
         (() => c1.invoke({})).should.throw('foobar');
@@ -238,8 +251,8 @@ describe('Integration', () => {
             return yield* delegate(c2, context);
         });
         const spy2 = sinon.spy<Handler<number, object>>(function* () { return 1; });
-        const c1 = chain<number, object>('testChain1').append('h', spy1).build();
-        const c2 = chain<number, object>('testChain2').append('h', spy2).build();
+        const c1 = chain('testChain1').append('h', spy1).build();
+        const c2 = chain('testChain2').append('h', spy2).build();
         c1.invoke({ x: 'foobar' });
         spy1.should.have.been.calledWithMatch({
             context: { x: 'foobar' },
@@ -261,7 +274,7 @@ describe('Integration', () => {
             return yield* proceed(Promise.resolve({ x: x + 2 }));
         };
         const h3: Handler<number, { x: number }> = function* ({ context: { x } }) { return x; };
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .append('h3', h3).build();
@@ -278,13 +291,13 @@ describe('Integration', () => {
             return yield* delegate(c3, Promise.resolve(context));
         };
         const h3: Handler<number, { x: number }> = (function* ({ context: { x } }) { return x; });
-        const c1 = chain<number, { x: number }>('testChain1')
+        const c1 = chain('testChain1')
             .append('h1', h1).build();
 
-        const c2 = chain<number, { x: number }>('testChain2')
+        const c2 = chain('testChain2')
             .append('h2', h2).build();
 
-        const c3 = chain<number, { x: number }>('testChain3')
+        const c3 = chain('testChain3')
             .append('h3', h3).build();
 
         const result = c1.invoke({ x: 1 });
@@ -297,7 +310,7 @@ describe('Integration', () => {
             return yield* proceed({ x: x * 3 });
         });
         const h2 = sinon.spy<Handler<number, { x: number }>>(function* ({ context: { x } }) { return x + 1 });
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .build();
@@ -321,7 +334,7 @@ describe('Integration', () => {
             return yield* proceed({ x: x * 3 });
         });
         const h2 = sinon.spy<Handler<number, { x: number }>>(function* ({ context: { x } }) { return x + 1 });
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .build();
@@ -345,10 +358,10 @@ describe('Integration', () => {
     it(`Should throw when removing a missing interceptor`, () => {
         const h = function* () { return 1 };
 
-        const c = chain<number, object>('testChain')
+        const c = chain('testChain')
             .append('h', h).build();
 
-        const interceptor = handlerInterceptor<number, object>('i', function* ({ proceed }) {
+        const interceptor = handlerInterceptor<number, unknown>('i', function* ({ proceed }) {
             return yield* proceed();
         });
 
@@ -363,7 +376,7 @@ describe('Integration', () => {
             return yield* proceed({ x: x + 3 });
         };
         const h2: Handler<number, { x: number }> = function* ({ context: { x } }) { return Promise.resolve(x * 2); };
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .build();
@@ -381,7 +394,7 @@ describe('Integration', () => {
             }
         };
         const h2: Handler<number, { x: number }> = function* () { return Promise.reject(new Error('foobar')); };
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .build();
@@ -395,7 +408,7 @@ describe('Integration', () => {
             return yield* proceed({ x: x + 3 });
         };
         const h2: Handler<number, { x: number }> = function* () { return Promise.reject(new Error('foobar')); };
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .build();
@@ -414,7 +427,7 @@ describe('Integration', () => {
         const h3 = sinon.spy<Handler<number, { x: number }>>(function* ({ context }) {
             return context.x + 1;
         });
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .append('h3', h3)
@@ -437,7 +450,7 @@ describe('Integration', () => {
         const h3 = sinon.spy<Handler<number, { x: number }>>(function* ({ context }) {
             return context.x + 1;
         });
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .append('h3', h3)
@@ -465,7 +478,7 @@ describe('Integration', () => {
             return context.x + 1;
         });
 
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .append('h3', h3)
@@ -492,7 +505,7 @@ describe('Integration', () => {
         const h3 = sinon.spy<Handler<number, { x: number }>>(function* h3({ context }) {
             return context.x + 1;
         });
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .append('h3', h3)
@@ -515,7 +528,7 @@ describe('Integration', () => {
         const h3: Handler<number, { x: number }> = function* () {
             throw new Error('foobar')
         };
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .append('h3', h3)
@@ -543,7 +556,7 @@ describe('Integration', () => {
         const h3: Handler<number, { x: number }> = function* ({ context }) {
             return Promise.resolve(context.x + 1);
         };
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .append('h3', h3)
@@ -573,7 +586,7 @@ describe('Integration', () => {
             return Promise.resolve(context.x + 1);
         });
 
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .append('h3', h3)
@@ -601,7 +614,7 @@ describe('Integration', () => {
             return Promise.reject();
         };
 
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .append('h3', h3)
@@ -627,7 +640,7 @@ describe('Integration', () => {
         const h4 = sinon.spy<Handler<number, { x: number }>>(function* ({ context }) {
             return context.x * context.x;
         });
-        const c = chain<number, { x: number }>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .append('h3', h3)
@@ -654,12 +667,12 @@ describe('Integration', () => {
             return context.x + 1;
         });
 
-        const c1 = chain<number, { x: number }>('testChain1')
+        const c1 = chain('testChain1')
             .append('h1', h1)
             .append('h2', h2)
             .build();
 
-        const c2 = chain<number, { x: number }>('testChain2')
+        const c2 = chain('testChain2')
             .append('h3', h3)
             .append('h4', h4)
             .build();
@@ -688,12 +701,12 @@ describe('Integration', () => {
             return Promise.resolve(context.x + 1);
         });
 
-        const c1 = chain<number, { x: number }>('testChain1')
+        const c1 = chain('testChain1')
             .append('h1', h1)
             .append('h2', h2)
             .build();
 
-        const c2 = chain<number, { x: number }>('testChain2')
+        const c2 = chain('testChain2')
             .append('h3', h3)
             .append('h4', h4)
             .append('h5', h5)
@@ -730,12 +743,12 @@ describe('Integration', () => {
             return x + 1;
         });
 
-        const c1 = chain<number, { x: number }>('testChain1')
+        const c1 = chain('testChain1')
             .append('h1', h1)
             .append('h2', h2)
             .build();
 
-        const c2 = chain<number, { x: number }>('testChain2')
+        const c2 = chain('testChain2')
             .append('h3', h3)
             .append('h4', h4)
             .append('h5', h5)
@@ -754,7 +767,7 @@ describe('Integration', () => {
         const h1: Handler<number, object> = function* ({ proceed }) { return yield* proceed(); };
         const h2: Handler<number, object> = function* ({ context, fork }) { return fork(context); };
         const h3: Handler<number, object> = function* () { return 1 };
-        const c = chain<number, object>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .append('h3', h3)
@@ -766,7 +779,7 @@ describe('Integration', () => {
         const h1: Handler<number, object> = function* ({ proceed }) { return yield* proceed(); };
         const h2: Handler<number, object> = function* ({ context, fork }) { return Promise.resolve().then(() => fork(context)); };
         const h3: Handler<number, object> = function* () { return 1 };
-        const c = chain<number, object>('testChain')
+        const c = chain('testChain')
             .append('h1', h1)
             .append('h2', h2)
             .append('h3', h3)

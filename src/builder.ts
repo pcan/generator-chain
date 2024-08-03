@@ -1,6 +1,6 @@
 import {
     ChainBuilder, Handlers, Chain, HandlerOperations,
-    NamedHandler, OpaqueHandler, interceptorSym
+    NamedHandler, OpaqueHandler, interceptorSym, ChainStartBuilder
 } from "./chain-commons";
 import { execute } from "./chain-executor";
 
@@ -8,15 +8,15 @@ export {
 
 } from "./chain-commons";
 
-export function chain<T = never, C = never>(id: string): ChainBuilder<T, {}, C> {
+export function chain(id: string) {
     const namedHandlers: NamedHandler[] = [];
 
-    function append(name: string, handler: OpaqueHandler): ChainBuilder<T, Handlers, C> {
+    function append(name: string, handler: OpaqueHandler) {
         namedHandlers.push({ name, handler });
         return builder;
     }
 
-    function build(): Chain<T, Handlers, C> {
+    function build<T, C>(): Chain<T, Handlers, C> {
         const initialHandlers = Object.create(namedHandlers)
         const handlers = Object.freeze(Object.assign(initialHandlers, namedHandlers.reduce(
             (obj, namedHandler) => (obj[namedHandler.name] = {
@@ -39,9 +39,9 @@ export function chain<T = never, C = never>(id: string): ChainBuilder<T, {}, C> 
         return chain;
     }
 
-    const builder = { build, append } as ChainBuilder<T, Handlers, C>;
+    const builder = { build, append };
 
-    return builder;
+    return { append } as ChainStartBuilder;
 }
 
 function findHandlerIndex(handlers: NamedHandler[], target: OpaqueHandler) {

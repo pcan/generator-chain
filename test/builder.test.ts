@@ -21,14 +21,9 @@ describe('Chain Builder', () => {
 
     after(() => mockExecute.restore());
 
-    it(`Should create an empty chain`, () => {
-        const c = chain<any, any>('test').build();
-        c.handlers.should.be.empty;
-    });
-
     it(`Should create a chain with a handler`, () => {
         const handler: OpaqueHandler<any> = function* () { };
-        const c = chain<any, any>('test')
+        const c = chain('test')
             .append('h1', handler)
             .build();
 
@@ -42,7 +37,7 @@ describe('Chain Builder', () => {
 
     it(`Should invoke a chain`, () => {
         const handler: OpaqueHandler<any> = function* () { };
-        const c = chain<any, any>('test')
+        const c = chain('test')
             .append('h1', handler)
             .build();
         c.invoke(3);
@@ -51,7 +46,7 @@ describe('Chain Builder', () => {
 
     it(`Should add a handler interceptor`, () => {
         const handler: OpaqueHandler<any> = function* () { };
-        const c = chain<any, any>('test')
+        const c = chain('test')
             .append('h1', handler)
             .build();
 
@@ -67,7 +62,7 @@ describe('Chain Builder', () => {
 
     it(`Should remove a handler interceptor`, () => {
         const handler: OpaqueHandler<any> = function* () { };
-        const c = chain<any, any>('test')
+        const c = chain('test')
             .append('h1', handler)
             .build();
 
@@ -84,7 +79,7 @@ describe('Chain Builder', () => {
 
     it(`Should throw when removing a missing handler interceptor`, () => {
         const handler: OpaqueHandler<any> = function* () { };
-        const c = chain<any, any>('test')
+        const c = chain('test')
             .append('h1', handler)
             .build();
 
