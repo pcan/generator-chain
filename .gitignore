@@ -1,0 +1,10 @@
+node_modules/
+.vscode/
+dist/
+coverage
+.nyc_output
+temp
+*.tgz
+*.tar.gz
+.ignore.*
+.npmrc

@@ -1,0 +1,11 @@
+src/
+test/
+coverage/
+dist/**/*.map
+.vscode/
+.nyc_output/
+.gitignore
+temp
+*.tgz
+*.tar.gz
+.npmrc

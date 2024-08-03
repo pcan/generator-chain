@@ -1,0 +1,66 @@
+{
+  "name": "@pcan/generator-chain",
+  "version": "1.0.0",
+  "description": "Generators-based Chain of Responsibility",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "prepare": "tsc",
+    "test": "nyc mocha"
+  },
+  "author": "",
+  "license": "MIT",
+  "mocha": {
+    "require": [
+      "test/mocha.env",
+      "ts-node/register"
+    ],
+    "color": true,
+    "full-trace": true,
+    "bail": true,
+    "spec": [
+      "test/**/*.test.ts"
+    ],
+    "enable-source-maps": true
+  },
+  "nyc": {
+    "include": [
+      "src/**/*.ts"
+    ],
+    "extension": [
+      ".ts"
+    ],
+    "require": [
+      "./test/mocha.env",
+      "ts-node/register"
+    ],
+    "reporter": [
+      "text-summary",
+      "lcov"
+    ],
+    "sourceMap": true,
+    "instrument": true,
+    "check-coverage": true,
+    "lines": 100,
+    "statements": 100,
+    "functions": 100,
+    "branches": 100
+  },
+  "devDependencies": {
+    "@types/chai-as-promised": "^7.1.5",
+    "@types/mocha": "^10.0.1",
+    "@types/sinon": "^10.0.15",
+    "@types/sinon-chai": "^3.2.9",
+    "chai": "^4.3.7",
+    "chai-as-promised": "^7.1.1",
+    "mocha": "^10.2.0",
+    "nyc": "^15.1.0",
+    "sinon": "^15.2.0",
+    "sinon-chai": "^3.7.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.1.6"
+  },
+  "publishConfig": {
+    "@pcan:registry": "https://gitlab.com/api/v4/projects/48460062/packages/npm/"
+  }
+}
