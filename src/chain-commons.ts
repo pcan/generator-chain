@@ -50,20 +50,20 @@ export type Handler<T, C1, U = T, C2 = C1> = (invocation: ChainInvocation<U, C1,
 
 export type Handlers = Record<string, OpaqueHandler>;
 export type UniqueHandlerName<H extends Handlers, N extends string> = N extends keyof H ? never : N;
-type MergedHandlers<H extends Handlers, N extends string, T, C1, U, C2 = C1> = Identity<H & { [key in N]: Handler<T, C1, U, C2> }>
-
+type MergedHandlers<H extends Handlers, N extends string, T, C1, U, C2, X extends Handler<T, C1, U, C2>> = Identity<H & {
+    [key in N]: X;
+}>;
 export interface ChainStartBuilder {
-    append<N extends string, T, C1, U, C2>(name: N, handler: Handler<T, C1, U, C2>):
-        ChainBuilder<T, C1, MergedHandlers<{}, N, T, C1, U, C2>, U, C2>;
+    append<N extends string, T, C1, U, C2, X extends Handler<T, C1, U, C2>>(
+        name: N, handler: X & Handler<T, C1, U, C2>
+    ): ChainBuilder<T, C1, MergedHandlers<{}, N, T, C1, U, C2, X>, U, C2>;
 }
 
 export interface ChainBuilder<T, C, H extends Handlers, U, D = C> {
-    append<N extends string, V>(name: UniqueHandlerName<H, N>, handler: Handler<U, D, V>):
-        ChainBuilder<T, C, MergedHandlers<H, N, U, D, V>, V, D>;
-
-    append<N extends string, V, E>(name: UniqueHandlerName<H, N>, adapterHandler: Handler<U, D, V, E>):
-        ChainBuilder<T, C, MergedHandlers<H, N, U, D, V, E>, V, E>;
-
+    append<N extends string, V, X extends Handler<U, D, V>>(
+        name: UniqueHandlerName<H, N>, handler: X & Handler<U, D, V>): ChainBuilder<T, C, MergedHandlers<H, N, U, D, V, D, X>, V, D>;
+    append<N extends string, V, E, X extends Handler<U, D, V, E>>(
+        name: UniqueHandlerName<H, N>, adapterHandler: X & Handler<U, D, V, E>): ChainBuilder<T, C, MergedHandlers<H, N, U, D, V, E, X>, V, E>;
     build(): Chain<T, C, H>;
 }
 
@@ -120,7 +120,7 @@ export interface ExecutionId {
 
 type NextContext<C1, C2> = C1 extends C2 ? OptionalContext<C2> : Context<C2>;
 
-export interface ChainInvocation<T, C1, C2> {
+export interface ChainInvocation<T, C1, C2 = C1> {
     readonly executionId: ExecutionId;
     readonly context: C1;
     proceed(context: NextContext<C1, C2>): ChainGenerator<T>;
