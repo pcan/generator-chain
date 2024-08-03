@@ -97,9 +97,10 @@ class ChainExecutor<T, C> {
             try {
                 const stepExecutionResult = this.step();
                 if (isPromise(stepExecutionResult)) { // async generator
-                    return stepExecutionResult
-                        .then(r => this.invokeHandlers(this.dispatchResult(r, ctx)))
-                        .catch(err => (this.throw(err), this.invokeHandlers(ctx)));
+                    return stepExecutionResult.then(
+                        r => this.invokeHandlers(this.dispatchResult(r, ctx)),
+                        err => (this.throw(err), this.invokeHandlers(ctx))
+                    );
                 } else { // sync generator
                     ctx = this.dispatchResult(stepExecutionResult, ctx);
                 }

@@ -46,7 +46,7 @@ Good morning, pcan 😄
 
 Generally speaking, the classical Chain of Responsibility pattern implementation is constrained by the stack size, which has a fixed limit. Creating a chain with many handlers (or handlers taking many parameters) may result in `Maximum call stack size exceeded` errors. Adding extension points (interceptors) can exacerbate the problem, thus impairing customizability.
 
-This library overcomes such limitations by moving the stack management to the heap, using an execution engine that coordinates the execution of handlers (implemented as generator functions).
+This library overcomes such limitations by moving the stack management to the heap, using an engine that coordinates the execution of handlers (implemented as generator functions).
 
 ## How it works
 
@@ -57,6 +57,10 @@ The execution engine implements a call stack in the heap to keep track of the cu
 To maintain the same API, the chain execution returns a `PromiseOrValue<T>` instance, which represents either normal `Promise<T>` or the immediate execution result `T` if the execution is fully synchronous. In case there's at least one asynchronous handler (implemented as async generator function), the chain will always return a `Promise<T>`.
 
 
-## Features
+## Features & APIs
 
 Coming soon!
+
+## License
+
+MIT

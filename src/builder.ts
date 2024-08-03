@@ -14,16 +14,16 @@ export function chain(id: string) {
     }
 
     function build<T, C>(): Chain<T, C, Handlers> {
-        const interceptors = Object.freeze(namedHandlers.reduce(
+        type OpaqueInterceptors = Record<string, InterceptorOperations<OpaqueHandler>>;
+
+        const interceptors = Object.freeze(namedHandlers.reduce<OpaqueInterceptors>(
             (obj, namedHandler) => (obj[namedHandler.name] = {
                 add: (interceptor) =>
                     namedHandlers.splice(findHandlerIndex(namedHandlers, namedHandler.handler),
                         0, { name: interceptor[interceptorSym], handler: interceptor }),
                 remove: (interceptor) =>
                     namedHandlers.splice(findHandlerIndex(namedHandlers, interceptor), 1)
-
-            }, obj),
-            {} as Record<string, InterceptorOperations<OpaqueHandler>>
+            }, obj), {}
         ));
 
         function invoke(ctx: C) {
@@ -37,7 +37,7 @@ export function chain(id: string) {
 
     const builder = { build, append };
 
-    return { append } as ChainStartBuilder;
+    return builder as ChainStartBuilder;
 }
 
 function findHandlerIndex(handlers: NamedHandler[], target: OpaqueHandler) {

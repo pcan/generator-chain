@@ -1,7 +1,7 @@
 src/
 test/
 coverage/
-dist/**/*.map
+dist*/**/*.map
 .vscode/
 .nyc_output/
 .gitignore
@@ -9,4 +9,4 @@ temp
 *.tgz
 *.tar.gz
 .npmrc
-tsconfig.json
+tsconfig*.json

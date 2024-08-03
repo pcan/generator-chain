@@ -818,33 +818,33 @@ describe('Integration', () => {
         await c.invoke({}).should.eventually.be.rejectedWith('foo');
     });
 
-    it(`Should create a chain with 20000 handlers`, () => {
+    it(`Should create and invoke a chain with 20000 handlers`, () => {
 
         const handlers = new Array(20000).fill(null)
             .map<Handler<number, object>>((_, idx, arr) => function* ({ proceed }) {
-                return idx === arr.length - 1 ? 123 : yield* proceed();
+                return idx === arr.length - 1 ? 123 : (yield* proceed()) + 1;
             })
 
         const builder = chain('testChain') as ChainBuilder<number, object, {}>;
 
         const c = handlers.reduce((_, h, idx) => builder.append('h' + idx, h), builder).build();
 
-        c.invoke({}).should.be.equal(123);
+        c.invoke({}).should.be.equal(20122);
     });
 
-    it(`Should create a chain with 20000 async handlers`, async () => {
+    it(`Should create and invoke a chain with 20000 async handlers`, async () => {
 
         const handlers = new Array(20000).fill(null)
             .map<Handler<number, object>>((_, idx, arr) => async function* ({ proceed }) {
                 await Promise.resolve();
-                return idx === arr.length - 1 ? 123 : yield* proceed();
+                return idx === arr.length - 1 ? 123 : (yield* proceed()) + 1;
             })
 
         const builder = chain('testChain') as ChainBuilder<number, object, {}>;
 
         const c = handlers.reduce((_, h, idx) => builder.append('h' + idx, h), builder).build();
 
-        await c.invoke({}).should.eventually.be.equal(123);
+        await c.invoke({}).should.eventually.be.equal(20122);
     });
 
 });

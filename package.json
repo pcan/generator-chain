@@ -3,12 +3,15 @@
   "version": "1.0.0",
   "description": "Generators-based Chain of Responsibility",
   "main": "dist/index.js",
+  "module": "dist-es/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "prepare": "tsc",
-    "test": "nyc mocha"
+    "prepare": "concurrently 'npm:build:cjs' 'npm:build:es'",
+    "build:cjs": "tsc",
+    "build:es": "tsc -p tsconfig.es.json",
+    "test": "tsc -p ./test && nyc mocha"
   },
-  "author": "",
+  "author": "github/pcan",
   "license": "MIT",
   "mocha": {
     "require": [
@@ -53,14 +56,12 @@
     "@types/sinon-chai": "^3.2.9",
     "chai": "^4.3.7",
     "chai-as-promised": "^7.1.1",
+    "concurrently": "^8.2.2",
     "mocha": "^10.2.0",
     "nyc": "^15.1.0",
     "sinon": "^15.2.0",
     "sinon-chai": "^3.7.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.1.6"
-  },
-  "publishConfig": {
-    "@pcan:registry": "https://gitlab.com/api/v4/projects/48460062/packages/npm/"
   }
 }
